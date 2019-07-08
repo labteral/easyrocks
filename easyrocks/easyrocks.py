@@ -46,6 +46,11 @@ class DB(metaclass=Singleton):
         if value_bytes is not None:
             return utils.to_object(value_bytes)
 
+    def exists(self, key):
+        if self.get(key) is not None:
+            return True
+        return False
+
     def delete(self, key):
         key_bytes = utils.str_to_bytes(key)
         self._db.delete(key_bytes, sync=True)
