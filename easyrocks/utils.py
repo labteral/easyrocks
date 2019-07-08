@@ -26,7 +26,7 @@ def bytes_to_str(bytes_string):
 
 def get_padded_int(integer):
     integer_string = str(integer)
-    zeros = 16 - len(integer_string)
+    zeros = 32 - len(integer_string)
     if zeros < 0:
         raise ValueError
     integer_string = f"{zeros * '0'}{integer_string}"

@@ -15,6 +15,9 @@ class Singleton(type):
         return cls._instances[cls]
 
 
+ALLOWED_KEY_TYPES = (int, str)
+
+
 class DB(metaclass=Singleton):
     def __init__(self, path='./rocksdb', opts=None):
 
@@ -31,6 +34,12 @@ class DB(metaclass=Singleton):
         self._db = RocksDB(f'{path}', rocks_opts)
 
     def put(self, key, value, write_batch=None):
+        if not isinstance(key, ALLOWED_KEY_TYPES):
+            raise TypeError
+
+        if value is None:
+            raise ValueError
+
         key_bytes = utils._get_key_bytes(key)
         value_bytes = utils.to_bytes(value)
 
@@ -55,14 +64,18 @@ class DB(metaclass=Singleton):
         key_bytes = utils.str_to_bytes(key)
         self._db.delete(key_bytes, sync=True)
 
+    def commit(self, write_batch):
+        if write_batch is not None:
+            self._db.write(write_batch, sync=True)
+
     def scan(self, prefix=None, reversed=False):
         iterator = self._db.iterkeys()
 
-        if prefix is not None:
-            prefix = utils.str_to_bytes(prefix)
-            iterator.seek(prefix)
-        else:
+        if prefix is None:
             iterator.seek_to_first()
+        else:
+            prefix_bytes = utils.str_to_bytes(prefix)
+            iterator.seek(prefix_bytes)
 
         if reversed:
             iterator = reversed(iterator)
