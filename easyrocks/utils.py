@@ -24,13 +24,23 @@ def bytes_to_str(bytes_string):
     return bytes_string.decode('utf-8')
 
 
-def get_padded_int(integer):
+def get_padded_int(integer, size=32, left=True, right=False):
     integer_string = str(integer)
-    zeros = 32 - len(integer_string)
+    return get_padded_str(integer_string, size, left, right)
+
+
+def get_padded_str(key, size=64, left=True, right=False):
+    if (left and right) or (not left and not right):
+        raise ValueError
+
+    zeros = size - len(key)
     if zeros < 0:
         raise ValueError
-    integer_string = f"{zeros * '0'}{integer_string}"
-    return integer_string
+    if left:
+        new_key = f"{zeros * '0'}{key}"
+    else:
+        new_key = f"{key}{zeros * '0'}"
+    return new_key
 
 
 def int_to_bytes(integer):
