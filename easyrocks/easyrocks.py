@@ -5,20 +5,10 @@ import rocksdb
 from . import utils
 from rocksdb import DB as RocksDB, Options, WriteBatch
 
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-
 ALLOWED_KEY_TYPES = (int, str)
 
 
-class DB(metaclass=Singleton):
+class DB:
     def __init__(self, path='./rocksdb', opts=None, read_only=False):
 
         rocks_opts = Options()
@@ -89,3 +79,6 @@ class DB(metaclass=Singleton):
             value_bytes = self._db.get(key_bytes)
             value = utils.to_object(value_bytes)
             yield key, value
+
+    def close(self):
+        self._db.close()
