@@ -19,7 +19,7 @@ ALLOWED_KEY_TYPES = (int, str)
 
 
 class DB(metaclass=Singleton):
-    def __init__(self, path='./rocksdb', opts=None):
+    def __init__(self, path='./rocksdb', opts=None, read_only=False):
 
         rocks_opts = Options()
         rocks_opts.create_if_missing = True
@@ -31,7 +31,7 @@ class DB(metaclass=Singleton):
             for key, value in opts.items():
                 setattr(rocks_opts, key, value)
 
-        self._db = RocksDB(f'{path}', rocks_opts)
+        self._db = RocksDB(f'{path}', rocks_opts, read_only=read_only)
 
     def put(self, key, value, write_batch=None):
         if not isinstance(key, ALLOWED_KEY_TYPES):
