@@ -71,9 +71,8 @@ class DB:
             iterator = reversed(iterator)
 
         for key_bytes in iterator:
-            try:
-                key = utils.bytes_to_str(key_bytes)
-            except IndexError:
+            key = utils.bytes_to_str(key_bytes)
+            if prefix is not None and key[:len(prefix)] != prefix:
                 return
 
             value_bytes = self._db.get(key_bytes)
