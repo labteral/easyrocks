@@ -58,13 +58,16 @@ class DB:
         if write_batch is not None:
             self._db.write(write_batch, sync=True)
 
-    def scan(self, prefix=None, reversed=False):
+    def scan(self, prefix=None, start_key=None, end_key=None, reversed=False):
         iterator = self._db.iterkeys()
 
-        if prefix is None:
+        if prefix is None and start_key is None:
             iterator.seek_to_first()
         else:
-            prefix_bytes = utils.str_to_bytes(prefix)
+            if prefix is not None:
+                prefix_bytes = utils.str_to_bytes(prefix)
+            else:
+                prefix_bytes = utils.str_to_bytes(start_key)
             iterator.seek(prefix_bytes)
 
         if reversed:
@@ -72,7 +75,11 @@ class DB:
 
         for key_bytes in iterator:
             key = utils.bytes_to_str(key_bytes)
+
             if prefix is not None and key[:len(prefix)] != prefix:
+                return
+
+            if end_key is not None and key > end_key:
                 return
 
             value_bytes = self._db.get(key_bytes)
