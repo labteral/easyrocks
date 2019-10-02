@@ -7,4 +7,4 @@ from rocksdb import (BackupEngine, BlockBasedTableFactory, BloomFilterPolicy, By
                      IAssociativeMergeOperator, IComparator, IFilterPolicy, IMergeOperator, ISliceTransform, LRUCache,
                      Options, PlainTableFactory, SkipListMemtableFactory, VectorMemtableFactory, WriteBatch)
 
-__version__ = '0.0.9a'
+__version__ = '0.0.10a'
