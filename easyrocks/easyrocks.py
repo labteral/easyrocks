@@ -11,9 +11,7 @@ ALLOWED_KEY_TYPES = (int, str)
 class DB:
     def __init__(self, path='./rocksdb', opts=None, read_only=False):
         self._path = path
-        rocks_opts = Options()
-        rocks_opts.create_if_missing = True
-        self._rocks_opts = rocks_opts
+        self._opts = opts
         self._read_only = read_only
         self.reload()
 
@@ -21,16 +19,22 @@ class DB:
         if path is None:
             path = self._path
 
-        rocks_opts = self._rocks_opts
+        if opts is None:
+            opts = self._opts
+
+        if read_only is None:
+            read_only = self._read_only
+
+        rocks_opts = Options()
+        rocks_opts.create_if_missing = True
         if opts:
             if not isinstance(opts, dict):
                 raise TypeError
             for key, value in opts.items():
                 setattr(rocks_opts, key, value)
 
-        if read_only is None:
-            read_only = self._read_only
-
+        if hasattr(self, '_db'):
+            del self._db
         self._db = RocksDB(path, rocks_opts, read_only=read_only)
 
     def put(self, key, value, write_batch=None):

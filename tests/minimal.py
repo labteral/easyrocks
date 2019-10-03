@@ -7,6 +7,18 @@ from easyrocks import DB
 print(f'easyrocks v{easyrocks.__version__}')
 db = DB(path='/tmp/rocksdb')
 
+# RELOAD AS READ-ONLY
+db.reload(read_only=True)
+try:
+    db.put("key1", "value1")
+    put = True
+except Exception:
+    put = False
+assert not put
+
+# RELOAD AS WRITABLE
+db.reload()
+
 # PUT
 for i in range(6):
     db.put(f'key{i + 1}', f'value{i + 1}')
