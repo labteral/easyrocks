@@ -62,4 +62,11 @@ assert index == 4
 for _, value in db.scan(start_key='key3', end_key='key3'):
     assert value == 'value3'
 
+# START & STOP KEYS DO NOT EXIST
+index = 1
+for _, value in db.scan(start_key='key0', end_key='key9'):
+    assert value == f'value{index}'
+    index += 1
+assert index == 6
+
 print('OK!')
