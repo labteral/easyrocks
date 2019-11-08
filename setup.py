@@ -7,11 +7,11 @@ import easyrocks
 
 setup(name='easyrocks',
       version=easyrocks.__version__,
-      description='',
+      description='Work easier with RocksDB in Python',
       url='https://github.com/brunneis/easyrocks',
-      author='Rodrigo Martínez',
-      author_email='dev@brunneis.com',
-      license='GNU General Public License v3.0',
+      author='Rodrigo Martínez Castaño',
+      author_email='rodrigo@martinez.gal',
+      license='GNU General Public License v3 (GPLv3)',
       packages=find_packages(),
       zip_safe=False,
       classifiers=[
