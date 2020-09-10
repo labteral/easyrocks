@@ -24,15 +24,14 @@ def bytes_to_str(bytes_string):
     return bytes_string.decode('utf-8')
 
 
-def get_padded_int(integer, size=32, left=True, right=False):
+def get_padded_int(integer, size=32, left=False, right=False):
     integer_string = str(integer)
     return get_padded_str(integer_string, size, left, right)
 
 
-def get_padded_str(key, size=64, left=True, right=False):
-    if (left and right) or (not left and not right):
-        raise ValueError
-
+def get_padded_str(key, size=64, left=False, right=False):
+    if not left and not right:
+        left = True
     zeros = size - len(key)
     if zeros < 0:
         raise ValueError
