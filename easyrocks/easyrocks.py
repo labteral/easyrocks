@@ -1,41 +1,57 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import rocksdb
 from . import utils
-from rocksdb import DB as RocksDB, Options, WriteBatch
+from rocksdb import *
+from rocksdb import DB as RDB, Options
 
 ALLOWED_KEY_TYPES = (int, str)
 
 
-class DB:
-    def __init__(self, path='./rocksdb', opts=None, read_only=False):
+class RocksDB:
+    def __init__(self, path: str = './rocksdb-data', opts: dict = None, read_only: bool = False):
         self._path = path
+
+        if opts is None:
+            opts = {}
         self._opts = opts
+
         self._read_only = read_only
-        self.reload()
 
-    def reload(self, path=None, opts=None, read_only=None):
-        if path is None:
-            path = self._path
+        self.reload(read_only=read_only)
 
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @property
+    def opts(self) -> dict:
+        return dict(self._opts)
+
+    @property
+    def read_only(self) -> bool:
+        return self._read_only
+
+    @property
+    def db(self) -> RDB:
+        return self._db
+
+    def reload(self, opts: dict = None, read_only: bool = None):
         if opts is None:
             opts = self._opts
 
         if read_only is None:
             read_only = self._read_only
 
-        rocks_opts = Options()
-        rocks_opts.create_if_missing = True
-        if opts:
-            if not isinstance(opts, dict):
-                raise TypeError
-            for key, value in opts.items():
-                setattr(rocks_opts, key, value)
+        rocks_opts = Options(create_if_missing=True)
+        for key, value in opts.items():
+            setattr(rocks_opts, key, value)
 
         if hasattr(self, '_db'):
+            self.close()
             del self._db
-        self._db = RocksDB(path, rocks_opts, read_only=read_only)
+
+        self._db = RDB(self._path, rocks_opts, read_only=read_only)
 
     def put(self, key, value, write_batch=None):
         if not isinstance(key, ALLOWED_KEY_TYPES):
@@ -105,3 +121,8 @@ class DB:
 
     def close(self):
         self._db.close()
+
+
+# Backward compatibility
+class DB(RocksDB):
+    pass
