@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import easyrocks
-from easyrocks import DB
+from easyrocks import RocksDB
 
 print(f'easyrocks v{easyrocks.__version__}')
-db = DB(path='/tmp/rocksdb')
+db = RocksDB(path='/tmp/rocksdb')
+backup_path = '/tmp/rocksdb-backup'
 
 # RELOAD AS READ-ONLY
 db.reload(read_only=True)
@@ -24,6 +25,24 @@ for i in range(6):
     db.put(f'key{i + 1}', f'value{i + 1}')
     assert db.get(f'key{i + 1}') == f'value{i + 1}'
     assert db.exists(f'key{i + 1}')
+
+# CREATE TWO BACKUPS
+db.backup(path=backup_path)
+
+# BACKUP INFO
+backup_info = db.backup_info(backup_path)
+number_of_backup = len(backup_info)
+
+# RESTORE FIRST BACKUP
+db.restore_backup(backup_path, backup_info[0]['backup_id'])
+
+# RESTORE LATEST BACKUP
+db.restore_backup(backup_path)
+
+# DELETE LATEST BACKUP
+db.delete_backup(backup_path, backup_info[-1]['backup_id'])
+backup_info = db.backup_info(backup_path)
+assert number_of_backup - 1 == len(backup_info)
 
 # DELETE
 db.delete('key6')

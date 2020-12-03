@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import gc
+import weakref
 from . import utils
-from rocksdb import *
-from rocksdb import DB as RDB, Options
+from rocksdb import DB, Options, BackupEngine
 
 ALLOWED_KEY_TYPES = (int, str)
 
 
 class RocksDB:
-    def __init__(self, path: str = './rocksdb-data', opts: dict = None, read_only: bool = False):
+    def __init__(self, path: str = './rocksdb', opts: dict = None, read_only: bool = False):
         self._path = path
 
         if opts is None:
@@ -17,7 +18,6 @@ class RocksDB:
         self._opts = opts
 
         self._read_only = read_only
-
         self.reload(read_only=read_only)
 
     @property
@@ -33,7 +33,7 @@ class RocksDB:
         return self._read_only
 
     @property
-    def db(self) -> RDB:
+    def db(self) -> DB:
         return self._db
 
     def reload(self, opts: dict = None, read_only: bool = None):
@@ -49,9 +49,8 @@ class RocksDB:
 
         if hasattr(self, '_db'):
             self.close()
-            del self._db
 
-        self._db = RDB(self._path, rocks_opts, read_only=read_only)
+        self._db = DB(self._path, rocks_opts, read_only=read_only)
 
     def put(self, key, value, write_batch=None):
         if not isinstance(key, ALLOWED_KEY_TYPES):
@@ -120,9 +119,26 @@ class RocksDB:
             yield key, value
 
     def close(self):
-        self._db.close()
+        del self._db
+        gc.collect()
 
+    def backup(self, path: str = './rocksdb-backup'):
+        backup_engine = BackupEngine(path)
+        backup_engine.create_backup(self._db, flush_before_backup=True)
 
-# Backward compatibility
-class DB(RocksDB):
-    pass
+    def backup_info(self, path: str):
+        backup_engine = BackupEngine(path)
+        return backup_engine.get_backup_info()
+
+    def delete_backup(self, path: str, backup_id: int = None):
+        backup_engine = BackupEngine(path)
+        return backup_engine.delete_backup(backup_id)
+
+    def restore_backup(self, path: str, backup_id: int = None):
+        self.close()
+        backup_engine = BackupEngine(path)
+        if backup_id is None:
+            backup_engine.restore_latest_backup(self._path, self._path)
+        else:
+            backup_engine.restore_backup(backup_id, self._path, self._path)
+        self.reload()
