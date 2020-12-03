@@ -4,7 +4,7 @@
 import gc
 import weakref
 from . import utils
-from rocksdb import DB, Options, BackupEngine
+from rocksdb import *
 
 ALLOWED_KEY_TYPES = (int, str)
 
