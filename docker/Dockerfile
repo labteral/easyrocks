@@ -34,5 +34,5 @@ RUN \
     && rm -rf init_pkgs current_pkgs /root/.cache/pip \
     && find / -type d -name __pycache__ -exec rm -r {} \+
 
-ADD easyrocks.tar /opt/easyrocks
+ADD easyrocks.tar /tmp/easyrocks
 RUN cd /tmp/easyrocks && python setup.py install
