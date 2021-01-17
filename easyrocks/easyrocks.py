@@ -125,11 +125,13 @@ class RocksDB:
         backup_engine = BackupEngine(path)
         backup_engine.create_backup(self._db, flush_before_backup=True)
 
-    def backup_info(self, path: str):
+    @staticmethod
+    def backup_info(path: str):
         backup_engine = BackupEngine(path)
         return backup_engine.get_backup_info()
 
-    def delete_backup(self, path: str, backup_id: int = None):
+    @staticmethod
+    def delete_backup(path: str, backup_id: int = None):
         backup_engine = BackupEngine(path)
         return backup_engine.delete_backup(backup_id)
 
