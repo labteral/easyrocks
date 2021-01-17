@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import gc
-import weakref
 from . import utils
 from rocksdb import *
 
