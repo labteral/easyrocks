@@ -13,13 +13,13 @@ def to_object(bytes_value):
 
 
 def str_to_bytes(string):
-    if string == None:
+    if string is None:
         return
     return bytes(string, 'utf-8')
 
 
 def bytes_to_str(bytes_string):
-    if bytes_string == None:
+    if bytes_string is None:
         return
     return bytes_string.decode('utf-8')
 
