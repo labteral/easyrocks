@@ -47,7 +47,7 @@ assert number_of_backup - 1 == len(backup_info)
 # DELETE
 db.delete('key6')
 assert not db.get('key6')
-assert not db.exists(f'key6')
+assert not db.exists('key6')
 
 # REGULAR SCAN
 index = 1
