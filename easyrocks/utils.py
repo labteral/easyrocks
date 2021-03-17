@@ -2,14 +2,21 @@
 # -*- coding: utf-8 -*-
 
 import pickle
+import msgpack
 
 
-def to_bytes(value):
-    return pickle.dumps(value, protocol=4)
+def to_bytes(value) -> bytes:
+    try:
+        return msgpack.packb(value)
+    except TypeError:
+        return pickle.dumps(value, protocol=5)
 
 
-def to_object(bytes_value):
-    return pickle.loads(bytes_value)
+def to_object(value: bytes):
+    try:
+        return msgpack.unpackb(value)
+    except Exception:
+        return pickle.loads(value)
 
 
 def str_to_bytes(string):

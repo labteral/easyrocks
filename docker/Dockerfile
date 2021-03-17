@@ -27,8 +27,9 @@ RUN \
 RUN \
     pip install --upgrade pip \
     && pip install \
-    cython==0.29.20 \
-    python-rocksdb==0.7.0 \
+    "cython==0.29.20" \
+    "python-rocksdb==0.7.0" \
+    "msgpack==1.0.2" \
     && apt-get -y purge $(diff -u init_pkgs current_pkgs | grep -E "^\+" | cut -d + -f2- | sed -n '1!p' | uniq) \
     && apt-get clean \
     && rm -rf init_pkgs current_pkgs /root/.cache/pip \
