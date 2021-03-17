@@ -5,7 +5,7 @@ import gc
 from . import utils
 from rocksdb import *
 
-ALLOWED_KEY_TYPES = (int, str)
+ALLOWED_KEY_TYPES = (int, str, bytes)
 
 
 class RocksDB:
@@ -59,7 +59,7 @@ class RocksDB:
             raise ValueError
 
         key_bytes = utils._get_key_bytes(key)
-        value_bytes = utils.to_bytes(value)
+        value_bytes = utils.pack(value)
 
         if write_batch is not None:
             write_batch.put(key_bytes, value_bytes)
@@ -71,7 +71,7 @@ class RocksDB:
         value_bytes = self._db.get(key_bytes)
 
         if value_bytes is not None:
-            return utils.to_object(value_bytes)
+            return utils.unpack(value_bytes)
 
     def exists(self, key):
         if self.get(key) is not None:
@@ -79,14 +79,18 @@ class RocksDB:
         return False
 
     def delete(self, key):
-        key_bytes = utils.str_to_bytes(key)
-        self._db.delete(key_bytes, sync=True)
+        key = utils.to_padded_bytes(key)
+        self._db.delete(key, sync=True)
 
     def commit(self, write_batch):
         if write_batch is not None:
             self._db.write(write_batch, sync=True)
 
-    def scan(self, prefix=None, start_key=None, end_key=None, reversed_scan=False):
+    def scan(self, prefix=None, start_key=None, stop_key=None, reversed_scan=False):
+        prefix = utils.to_padded_bytes(prefix)
+        start_key = utils.to_padded_bytes(start_key)
+        stop_key = utils.to_padded_bytes(stop_key)
+
         iterator = self._db.iterkeys()
 
         if prefix is None and start_key is None:
@@ -95,26 +99,22 @@ class RocksDB:
             else:
                 iterator.seek_to_first()
         else:
-            if prefix is not None:
-                prefix_bytes = utils.str_to_bytes(prefix)
-            else:
-                prefix_bytes = utils.str_to_bytes(start_key)
-            iterator.seek(prefix_bytes)
+            if not prefix and start_key:
+                prefix = start_key
+            iterator.seek(prefix)
 
         if reversed_scan:
             iterator = reversed(iterator)
 
-        for key_bytes in iterator:
-            key = utils.bytes_to_str(key_bytes)
-
+        for key in iterator:
             if prefix is not None and key[:len(prefix)] != prefix:
                 return
 
-            if end_key is not None and key > end_key:
+            if stop_key is not None and key > stop_key:
                 return
 
-            value_bytes = self._db.get(key_bytes)
-            value = utils.to_object(value_bytes)
+            value_bytes = self._db.get(key)
+            value = utils.unpack(value_bytes)
             yield key, value
 
     def close(self):

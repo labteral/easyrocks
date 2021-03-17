@@ -2,20 +2,37 @@
 # -*- coding: utf-8 -*-
 
 import pickle
+import msgpack
+
+NON_UINT_KEY_BYTES = 40
+UINT_KEY_BYTES = 5
+MAX_UINT = 2**(UINT_KEY_BYTES * 8) - 1
 
 
-def to_bytes(value):
-    return pickle.dumps(value, protocol=4)
+def pack(value) -> bytes:
+    try:
+        return msgpack.packb(value)
+    except TypeError:
+        return pickle.dumps(value, protocol=5)
 
 
-def to_object(bytes_value):
-    return pickle.loads(bytes_value)
+def unpack(value: bytes):
+    try:
+        return msgpack.unpackb(value)
+    except Exception:
+        return pickle.loads(value)
 
 
-def str_to_bytes(string):
-    if string is None:
-        return
-    return bytes(string, 'utf-8')
+def to_padded_bytes(value):
+    if isinstance(value, str):
+        return str_to_padded_bytes(value)
+    if isinstance(value, int):
+        return int_to_padded_bytes(value)
+    if isinstance(value, bytes):
+        if len(value) != NON_UINT_KEY_BYTES:
+            raise ValueError(f'len(value) != {NON_UINT_KEY_BYTES}')
+        return value
+    raise TypeError
 
 
 def bytes_to_str(bytes_string):
@@ -24,33 +41,30 @@ def bytes_to_str(bytes_string):
     return bytes_string.decode('utf-8')
 
 
-def get_padded_int(integer, size=32, left=False, right=False):
-    integer_string = str(integer)
-    return get_padded_str(integer_string, size, left, right)
+def str_to_padded_bytes(value: str) -> bytes:
+    str_bytes = bytes(value, 'utf-8')
+    return str_bytes.rjust(NON_UINT_KEY_BYTES, b'\x00')
 
 
-def get_padded_str(key, size=64, left=False, right=False):
-    if not left and not right:
-        left = True
-    zeros = size - len(key)
-    if zeros < 0:
-        raise ValueError
-    if left:
-        new_key = f"{zeros * '0'}{key}"
-    else:
-        new_key = f"{key}{zeros * '0'}"
-    return new_key
+def int_to_big_endian(value: int) -> bytes:
+    return value.to_bytes((value.bit_length() + 7) // 8 or 1, "big")
 
 
-def int_to_bytes(integer):
-    return str_to_bytes(get_padded_int(integer))
+def int_to_padded_bytes(value: int):
+    if value > MAX_UINT:
+        raise ValueError(f'{value} > {MAX_UINT}')
+    int_bytes = int_to_big_endian(value)
+    return int_bytes.rjust(UINT_KEY_BYTES, b'\x00')
 
 
 def _get_key_bytes(key):
+    if isinstance(key, bytes):
+        return key
+
     if isinstance(key, int):
-        key_bytes = int_to_bytes(key)
-    elif isinstance(key, str):
-        key_bytes = str_to_bytes(key)
-    else:
-        raise TypeError
-    return key_bytes
+        return int_to_padded_bytes(key)
+
+    if isinstance(key, str):
+        return str_to_bytes(key)
+
+    raise TypeError

@@ -3,4 +3,4 @@
 
 from .easyrocks import *
 
-__version__ = '0.0.15a'
+__version__ = '21.3.17.0'
