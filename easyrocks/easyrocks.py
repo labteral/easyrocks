@@ -3,13 +3,17 @@
 
 import gc
 from . import utils
-from rocksdb import *
-
-ALLOWED_KEY_TYPES = (int, str, bytes)
+from rocksdb import DB, Options, WriteBatch, BackupEngine
+from typing import Dict, Generator
 
 
 class RocksDB:
-    def __init__(self, path: str = './rocksdb', opts: dict = None, read_only: bool = False):
+    ALLOWED_KEY_TYPES = (bytes, str, type(None))
+
+    def __init__(self,
+                 path: str = './rocksdb',
+                 opts: Dict = None,
+                 read_only: bool = False):
         self._path = path
 
         if opts is None:
@@ -24,7 +28,7 @@ class RocksDB:
         return self._path
 
     @property
-    def opts(self) -> dict:
+    def opts(self) -> Dict:
         return dict(self._opts)
 
     @property
@@ -35,7 +39,7 @@ class RocksDB:
     def db(self) -> DB:
         return self._db
 
-    def reload(self, opts: dict = None, read_only: bool = None):
+    def reload(self, opts: Dict = None, read_only: bool = None):
         if opts is None:
             opts = self._opts
 
@@ -52,13 +56,13 @@ class RocksDB:
         self._db = DB(self._path, rocks_opts, read_only=read_only)
 
     def put(self, key, value, write_batch=None):
-        if not isinstance(key, ALLOWED_KEY_TYPES):
+        if type(key) not in self.ALLOWED_KEY_TYPES:
             raise TypeError
 
         if value is None:
             raise ValueError
 
-        key_bytes = utils._get_key_bytes(key)
+        key_bytes = self._allowed_to_bytes(key)
         value_bytes = utils.pack(value)
 
         if write_batch is not None:
@@ -67,41 +71,60 @@ class RocksDB:
             self._db.put(key_bytes, value_bytes, sync=True)
 
     def get(self, key):
-        key_bytes = utils._get_key_bytes(key)
+        if type(key) not in self.ALLOWED_KEY_TYPES:
+            raise TypeError
+
+        key_bytes = self._allowed_to_bytes(key)
         value_bytes = self._db.get(key_bytes)
 
         if value_bytes is not None:
             return utils.unpack(value_bytes)
 
-    def exists(self, key):
+    def exists(self, key) -> bool:
         if self.get(key) is not None:
             return True
         return False
 
-    def delete(self, key):
-        key = utils.to_padded_bytes(key)
-        self._db.delete(key, sync=True)
+    def delete(self, key, write_batch: WriteBatch = None):
+        if type(key) not in self.ALLOWED_KEY_TYPES:
+            raise TypeError
 
-    def commit(self, write_batch):
+        key_bytes = self._allowed_to_bytes(key)
+
         if write_batch is not None:
-            self._db.write(write_batch, sync=True)
+            write_batch.delete(key_bytes)
+        else:
+            self._db.delete(key_bytes, sync=True)
 
-    def scan(self, prefix=None, start_key=None, stop_key=None, reversed_scan=False):
-        prefix = utils.to_padded_bytes(prefix)
-        start_key = utils.to_padded_bytes(start_key)
-        stop_key = utils.to_padded_bytes(stop_key)
+    def commit(self, write_batch: WriteBatch):
+        if write_batch is None:
+            raise ValueError
+        self._db.write(write_batch, sync=True)
+
+    def scan(self,
+             prefix=None,
+             start_key=None,
+             stop_key=None,
+             reversed_scan: bool = False) -> Generator:
+
+        for key in [prefix, start_key, stop_key]:
+            if type(key) not in self.ALLOWED_KEY_TYPES:
+                raise TypeError
+
+        prefix = self._allowed_to_bytes(prefix)
+        start_key = self._allowed_to_bytes(start_key)
+        stop_key = self._allowed_to_bytes(stop_key)
 
         iterator = self._db.iterkeys()
-
         if prefix is None and start_key is None:
             if reversed_scan:
                 iterator.seek_to_last()
             else:
                 iterator.seek_to_first()
-        else:
-            if not prefix and start_key:
-                prefix = start_key
+        elif prefix is not None:
             iterator.seek(prefix)
+        else:
+            iterator.seek(start_key)
 
         if reversed_scan:
             iterator = reversed(iterator)
@@ -115,6 +138,7 @@ class RocksDB:
 
             value_bytes = self._db.get(key)
             value = utils.unpack(value_bytes)
+
             yield key, value
 
     def close(self):
@@ -143,3 +167,12 @@ class RocksDB:
         else:
             backup_engine.restore_backup(backup_id, self._path, self._path)
         self.reload()
+
+    @staticmethod
+    def _allowed_to_bytes(value) -> bytes:
+        if isinstance(value, bytes):
+            return value
+        if isinstance(value, str):
+            return bytes(value, 'utf-8')
+        if value is None:
+            return None

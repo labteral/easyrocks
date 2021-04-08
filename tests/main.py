@@ -72,18 +72,18 @@ assert index == 6
 
 # START & STOP KEYS
 index = 2
-for _, value in db.scan(start_key='key2', end_key='key3'):
+for _, value in db.scan(start_key='key2', stop_key='key3'):
     assert value == f'value{index}'
     index += 1
 assert index == 4
 
 # START & STOP KEYS ARE THE SAME
-for _, value in db.scan(start_key='key3', end_key='key3'):
+for _, value in db.scan(start_key='key3', stop_key='key3'):
     assert value == 'value3'
 
 # START & STOP KEYS DO NOT EXIST
 index = 1
-for _, value in db.scan(start_key='key0', end_key='key9'):
+for _, value in db.scan(start_key='key0', stop_key='key9'):
     assert value == f'value{index}'
     index += 1
 assert index == 6
