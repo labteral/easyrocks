@@ -8,7 +8,8 @@ from typing import Dict, Generator
 
 
 class RocksDB:
-    ALLOWED_KEY_TYPES = (bytes, str, type(None))
+
+    ALLOWED_KEY_TYPES = set([bytes, type(None)])
 
     def __init__(self,
                  path: str = './rocksdb',
@@ -55,46 +56,42 @@ class RocksDB:
 
         self._db = DB(self._path, rocks_opts, read_only=read_only)
 
-    def put(self, key, value, write_batch=None):
+    def put(self, key: bytes, value, write_batch=None):
         if type(key) not in self.ALLOWED_KEY_TYPES:
             raise TypeError
 
         if value is None:
             raise ValueError
 
-        key_bytes = self._allowed_to_bytes(key)
         value_bytes = utils.pack(value)
 
         if write_batch is not None:
-            write_batch.put(key_bytes, value_bytes)
+            write_batch.put(key, value_bytes)
         else:
-            self._db.put(key_bytes, value_bytes, sync=True)
+            self._db.put(key, value_bytes, sync=True)
 
-    def get(self, key):
+    def get(self, key: bytes):
         if type(key) not in self.ALLOWED_KEY_TYPES:
             raise TypeError
 
-        key_bytes = self._allowed_to_bytes(key)
-        value_bytes = self._db.get(key_bytes)
+        value_bytes = self._db.get(key)
 
         if value_bytes is not None:
             return utils.unpack(value_bytes)
 
-    def exists(self, key) -> bool:
+    def exists(self, key: bytes) -> bool:
         if self.get(key) is not None:
             return True
         return False
 
-    def delete(self, key, write_batch: WriteBatch = None):
+    def delete(self, key: bytes, write_batch: WriteBatch = None):
         if type(key) not in self.ALLOWED_KEY_TYPES:
             raise TypeError
 
-        key_bytes = self._allowed_to_bytes(key)
-
         if write_batch is not None:
-            write_batch.delete(key_bytes)
+            write_batch.delete(key)
         else:
-            self._db.delete(key_bytes, sync=True)
+            self._db.delete(key, sync=True)
 
     def commit(self, write_batch: WriteBatch):
         if write_batch is None:
@@ -102,18 +99,14 @@ class RocksDB:
         self._db.write(write_batch, sync=True)
 
     def scan(self,
-             prefix=None,
-             start_key=None,
-             stop_key=None,
+             prefix: bytes = None,
+             start_key: bytes = None,
+             stop_key: bytes = None,
              reversed_scan: bool = False) -> Generator:
 
         for key in [prefix, start_key, stop_key]:
             if type(key) not in self.ALLOWED_KEY_TYPES:
                 raise TypeError
-
-        prefix = self._allowed_to_bytes(prefix)
-        start_key = self._allowed_to_bytes(start_key)
-        stop_key = self._allowed_to_bytes(stop_key)
 
         iterator = self._db.iterkeys()
         if prefix is None and start_key is None:
@@ -167,12 +160,3 @@ class RocksDB:
         else:
             backup_engine.restore_backup(backup_id, self._path, self._path)
         self.reload()
-
-    @staticmethod
-    def _allowed_to_bytes(value) -> bytes:
-        if isinstance(value, bytes):
-            return value
-        if isinstance(value, str):
-            return bytes(value, 'utf-8')
-        if value is None:
-            return None
