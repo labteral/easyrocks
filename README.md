@@ -1,7 +1,7 @@
 # easyrocks
 A `python-rocksdb` wrapper for a more comfortable interaction with RocksDB.
 
-> Keys must be strings. Values are serialized automatically with MessagePack if possible, otherwise with Pickle.
+> Keys must be of type `bytes`. Values are serialized automatically with MessagePack if possible, otherwise with Pickle.
 
 ## Usage
 ```python
