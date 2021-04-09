@@ -19,7 +19,7 @@ for key, value in db.scan(prefix=None, start_key=None, stop_key=None, reversed_s
 ```
 
 ## Utils
-There are some useful functions to transform a key to and from `bytes`.
+There are some useful functions to transform a key to and from `bytes`:
 ```python
 from easyrocks.utils import (
   str_to_bytes
