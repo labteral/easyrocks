@@ -3,13 +3,18 @@
 
 import gc
 from . import utils
-from rocksdb import *
-
-ALLOWED_KEY_TYPES = (int, str)
+from rocksdb import DB, Options, WriteBatch, BackupEngine
+from typing import Dict, Generator
 
 
 class RocksDB:
-    def __init__(self, path: str = './rocksdb', opts: dict = None, read_only: bool = False):
+
+    ALLOWED_KEY_TYPES = set([bytes, type(None)])
+
+    def __init__(self,
+                 path: str = './rocksdb',
+                 opts: Dict = None,
+                 read_only: bool = False):
         self._path = path
 
         if opts is None:
@@ -24,7 +29,7 @@ class RocksDB:
         return self._path
 
     @property
-    def opts(self) -> dict:
+    def opts(self) -> Dict:
         return dict(self._opts)
 
     @property
@@ -35,7 +40,7 @@ class RocksDB:
     def db(self) -> DB:
         return self._db
 
-    def reload(self, opts: dict = None, read_only: bool = None):
+    def reload(self, opts: Dict = None, read_only: bool = None):
         if opts is None:
             opts = self._opts
 
@@ -51,70 +56,82 @@ class RocksDB:
 
         self._db = DB(self._path, rocks_opts, read_only=read_only)
 
-    def put(self, key, value, write_batch=None):
-        if not isinstance(key, ALLOWED_KEY_TYPES):
+    def put(self, key: bytes, value, write_batch=None):
+        if type(key) not in self.ALLOWED_KEY_TYPES:
             raise TypeError
 
         if value is None:
             raise ValueError
 
-        key_bytes = utils._get_key_bytes(key)
-        value_bytes = utils.to_bytes(value)
+        value_bytes = utils.pack(value)
 
         if write_batch is not None:
-            write_batch.put(key_bytes, value_bytes)
+            write_batch.put(key, value_bytes)
         else:
-            self._db.put(key_bytes, value_bytes, sync=True)
+            self._db.put(key, value_bytes, sync=True)
 
-    def get(self, key):
-        key_bytes = utils._get_key_bytes(key)
-        value_bytes = self._db.get(key_bytes)
+    def get(self, key: bytes):
+        if type(key) not in self.ALLOWED_KEY_TYPES:
+            raise TypeError
+
+        value_bytes = self._db.get(key)
 
         if value_bytes is not None:
-            return utils.to_object(value_bytes)
+            return utils.unpack(value_bytes)
 
-    def exists(self, key):
+    def exists(self, key: bytes) -> bool:
         if self.get(key) is not None:
             return True
         return False
 
-    def delete(self, key):
-        key_bytes = utils.str_to_bytes(key)
-        self._db.delete(key_bytes, sync=True)
+    def delete(self, key: bytes, write_batch: WriteBatch = None):
+        if type(key) not in self.ALLOWED_KEY_TYPES:
+            raise TypeError
 
-    def commit(self, write_batch):
         if write_batch is not None:
-            self._db.write(write_batch, sync=True)
+            write_batch.delete(key)
+        else:
+            self._db.delete(key, sync=True)
 
-    def scan(self, prefix=None, start_key=None, end_key=None, reversed_scan=False):
+    def commit(self, write_batch: WriteBatch):
+        if write_batch is None:
+            raise ValueError
+        self._db.write(write_batch, sync=True)
+
+    def scan(self,
+             prefix: bytes = None,
+             start_key: bytes = None,
+             stop_key: bytes = None,
+             reversed_scan: bool = False) -> Generator:
+
+        for key in [prefix, start_key, stop_key]:
+            if type(key) not in self.ALLOWED_KEY_TYPES:
+                raise TypeError
+
         iterator = self._db.iterkeys()
-
         if prefix is None and start_key is None:
             if reversed_scan:
                 iterator.seek_to_last()
             else:
                 iterator.seek_to_first()
+        elif prefix is not None:
+            iterator.seek(prefix)
         else:
-            if prefix is not None:
-                prefix_bytes = utils.str_to_bytes(prefix)
-            else:
-                prefix_bytes = utils.str_to_bytes(start_key)
-            iterator.seek(prefix_bytes)
+            iterator.seek(start_key)
 
         if reversed_scan:
             iterator = reversed(iterator)
 
-        for key_bytes in iterator:
-            key = utils.bytes_to_str(key_bytes)
-
+        for key in iterator:
             if prefix is not None and key[:len(prefix)] != prefix:
                 return
 
-            if end_key is not None and key > end_key:
+            if stop_key is not None and key > stop_key:
                 return
 
-            value_bytes = self._db.get(key_bytes)
-            value = utils.to_object(value_bytes)
+            value_bytes = self._db.get(key)
+            value = utils.unpack(value_bytes)
+
             yield key, value
 
     def close(self):

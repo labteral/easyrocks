@@ -5,59 +5,50 @@ import pickle
 import msgpack
 
 
-def to_bytes(value) -> bytes:
+def pack(value) -> bytes:
     try:
         return msgpack.packb(value)
     except TypeError:
         return pickle.dumps(value, protocol=5)
 
 
-def to_object(value: bytes):
+def unpack(value: bytes):
     try:
         return msgpack.unpackb(value)
     except Exception:
         return pickle.loads(value)
 
 
-def str_to_bytes(string):
-    if string is None:
-        return
-    return bytes(string, 'utf-8')
+def str_to_bytes(value: str) -> bytes:
+    return bytes(value, 'utf-8')
 
 
-def bytes_to_str(bytes_string):
-    if bytes_string is None:
-        return
-    return bytes_string.decode('utf-8')
+def bytes_to_str(value: bytes) -> str:
+    if value is not None:
+        return value.decode('utf-8')
 
 
-def get_padded_int(integer, size=32, left=False, right=False):
-    integer_string = str(integer)
-    return get_padded_str(integer_string, size, left, right)
+def _big_endian_to_int(value: bytes) -> int:
+    return int.from_bytes(value, "big")
 
 
-def get_padded_str(key, size=64, left=False, right=False):
-    if not left and not right:
-        left = True
-    zeros = size - len(key)
-    if zeros < 0:
-        raise ValueError
-    if left:
-        new_key = f"{zeros * '0'}{key}"
-    else:
-        new_key = f"{key}{zeros * '0'}"
-    return new_key
+def _int_to_big_endian(value: int) -> bytes:
+    return value.to_bytes((value.bit_length() + 7) // 8 or 1, 'big')
 
 
-def int_to_bytes(integer):
-    return str_to_bytes(get_padded_int(integer))
+def int_to_bytes(value: int):
+    return _int_to_big_endian(value)
 
 
-def _get_key_bytes(key):
-    if isinstance(key, int):
-        key_bytes = int_to_bytes(key)
-    elif isinstance(key, str):
-        key_bytes = str_to_bytes(key)
-    else:
-        raise TypeError
-    return key_bytes
+def bytes_to_int(value: bytes):
+    return _big_endian_to_int(value)
+
+
+def str_to_padded_bytes(value: str, length: int) -> bytes:
+    str_bytes = str_to_bytes(value)
+    return str_bytes.rjust(length, b'\x00')
+
+
+def int_to_padded_bytes(value: int, lenght: int) -> bytes:
+    int_bytes = int_to_bytes(value)
+    return int_bytes.rjust(lenght, b'\x00')

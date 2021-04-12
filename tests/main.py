@@ -3,6 +3,7 @@
 
 import easyrocks
 from easyrocks import RocksDB
+from easyrocks.utils import str_to_bytes
 
 print(f'easyrocks v{easyrocks.__version__}')
 db = RocksDB(path='/tmp/rocksdb')
@@ -22,9 +23,10 @@ db.reload()
 
 # PUT
 for i in range(6):
-    db.put(f'key{i + 1}', f'value{i + 1}')
-    assert db.get(f'key{i + 1}') == f'value{i + 1}'
-    assert db.exists(f'key{i + 1}')
+    key = str_to_bytes(f'key{i + 1}')
+    db.put(key, f'value{i + 1}')
+    assert db.get(key) == f'value{i + 1}'
+    assert db.exists(key)
 
 # CREATE TWO BACKUPS
 db.backup(path=backup_path)
@@ -45,9 +47,10 @@ backup_info = db.backup_info(backup_path)
 assert number_of_backup - 1 == len(backup_info)
 
 # DELETE
-db.delete('key6')
-assert not db.get('key6')
-assert not db.exists('key6')
+key = str_to_bytes('key6')
+db.delete(key)
+assert not db.get(key)
+assert not db.exists(key)
 
 # REGULAR SCAN
 index = 1
@@ -65,25 +68,32 @@ assert index == 0
 
 # START KEY
 index = 2
-for _, value in db.scan(start_key='key2'):
+start_key = str_to_bytes('key2')
+for _, value in db.scan(start_key=start_key):
     assert value == f'value{index}'
     index += 1
 assert index == 6
 
 # START & STOP KEYS
 index = 2
-for _, value in db.scan(start_key='key2', end_key='key3'):
+start_key = str_to_bytes('key2')
+stop_key = str_to_bytes('key3')
+for _, value in db.scan(start_key=start_key, stop_key=stop_key):
     assert value == f'value{index}'
     index += 1
 assert index == 4
 
 # START & STOP KEYS ARE THE SAME
-for _, value in db.scan(start_key='key3', end_key='key3'):
+start_key = str_to_bytes('key3')
+stop_key = str_to_bytes('key3')
+for _, value in db.scan(start_key=start_key, stop_key=stop_key):
     assert value == 'value3'
 
 # START & STOP KEYS DO NOT EXIST
 index = 1
-for _, value in db.scan(start_key='key0', end_key='key9'):
+start_key = str_to_bytes('key0')
+stop_key = str_to_bytes('key9')
+for _, value in db.scan(start_key=start_key, stop_key=stop_key):
     assert value == f'value{index}'
     index += 1
 assert index == 6
