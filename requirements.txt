@@ -1,2 +1,2 @@
-python-rocksdb==0.7.0
-msgpack==1.0.2
+python-rocksdb~=0.7.0
+msgpack~=1.0.3

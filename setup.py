@@ -24,4 +24,4 @@ setup(name='easyrocks',
           "Programming Language :: Python :: Implementation :: PyPy",
           "Topic :: Software Development :: Libraries :: Python Modules",
       ],
-      install_requires=['python-rocksdb==0.7.0', 'msgpack==1.0.2'])
+      install_requires=['python-rocksdb~=0.7.0', 'msgpack~=1.0.3'])
