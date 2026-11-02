@@ -1,39 +1,21 @@
-FROM brunneis/python:3.9
+FROM registry.opensuse.org/opensuse/tumbleweed:latest@sha256:c6a30f005bf3444ef1ca02f49a0c34ee539b3299f948f1ecaf633e5b12dd2490 AS base
+# Maintainer RPMs carry the TLS/TAR fixes ahead of the stable snapshot.
+RUN zypper --non-interactive addrepo --priority 120 https://download.opensuse.org/repositories/devel:/languages:/python:/Factory/openSUSE_Tumbleweed/ python-factory
+# Require the maintained Expat amplification fix.
+RUN zypper --non-interactive addrepo --priority 120 https://download.opensuse.org/repositories/devel:/libraries:/c_c++/openSUSE_Factory/ libraries-devel
+RUN zypper --non-interactive --gpg-auto-import-keys refresh \
+    && zypper --non-interactive install --no-recommends ca-certificates 'python314>=3.14.10' 'python314-base>=3.14.10' 'python314-dbm>=3.14.10' libstdc++6 'libexpat1>=2.10.0' \
+    && zypper clean --all
+ENV PATH="/opt/venv/bin:${PATH}" PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
 
-ARG ROCKSDB_VERSION
-RUN \
-    ROCKSDB_BASE_URL=https://github.com/facebook/rocksdb/archive \
-    && apt-get update \
-    && dpkg-query -Wf '${Package}\n' | sort > init_pkgs \
-    && apt-get -y install \
-    build-essential \
-    curl \
-    && dpkg-query -Wf '${Package}\n' | sort > current_pkgs \
-    && apt-get install -y \
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libzstd-dev \
-    && curl -L $ROCKSDB_BASE_URL/v$ROCKSDB_VERSION.tar.gz -o rocksdb.tar.gz -s \
-    && tar xf rocksdb.tar.gz \
-    && cd rocksdb-$ROCKSDB_VERSION \
-    && DEBUG_LEVEL=0 make shared_lib install-shared \
-    && cd .. \
-    && rm -r rocksdb-$ROCKSDB_VERSION \
-    && rm rocksdb.tar.gz
+FROM base AS pypkgs
+RUN zypper --non-interactive refresh \
+    && zypper --non-interactive install --no-recommends python314-pip \
+    && zypper clean --all
+RUN python3.14 -m venv --system-site-packages --without-pip /opt/venv
+COPY . /src
+RUN python -m pip install --no-compile --only-binary=google-crc32c,pymongo,rocksdict /src && python -m pip check
 
-RUN \
-    pip install --upgrade pip \
-    && pip install \
-    "cython==0.29.20" \
-    "python-rocksdb==0.7.0" \
-    "msgpack==1.0.2" \
-    && apt-get -y purge $(diff -u init_pkgs current_pkgs | grep -E "^\+" | cut -d + -f2- | sed -n '1!p' | uniq) \
-    && apt-get clean \
-    && rm -rf init_pkgs current_pkgs /root/.cache/pip \
-    && find / -type d -name __pycache__ -exec rm -r {} \+
-
-ADD easyrocks.tar /tmp/easyrocks
-RUN cd /tmp/easyrocks && python setup.py install
+FROM base
+COPY --from=pypkgs /opt/venv /opt/venv
+CMD ["python"]

@@ -1,7 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from rocksdb import *
-from .easyrocks import *
+from rocksdict import (
+    AccessType,
+    Checkpoint,
+    DBCompressionType,
+    Options,  # noqa: F401
+    Rdict,
+    ReadOptions,
+    WriteOptions,
+)
 
-__version__ = '2.214.0.1'
+from .easyrocks import CompressionType, RocksDB, WriteBatch  # noqa: F401
+from ._version import __version__  # noqa: F401

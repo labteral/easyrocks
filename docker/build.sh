@@ -1,8 +1,14 @@
-#!/bin/bash
-source env.sh
-docker rmi labteral/easyrocks:$VERSION 2> /dev/null
-tar cf ../../easyrocks.tar ../
-mv ../../easyrocks.tar .
-docker build --no-cache -t labteral/easyrocks:$VERSION --build-arg ROCKSDB_VERSION=$ROCKSDB_VERSION .
-docker tag labteral/easyrocks:$VERSION labteral/easyrocks:latest
-rm -f easyrocks.tar
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ROOT_DIR=$(cd -- "$SCRIPT_DIR/.." && pwd)
+source "$SCRIPT_DIR/env.sh"
+
+docker build \
+    --pull \
+    --file "$SCRIPT_DIR/Dockerfile" \
+    --tag "labteral/easyrocks:$VERSION" \
+    --build-arg "EASYROCKS_VERSION=$VERSION" \
+    "$ROOT_DIR"
+docker tag "labteral/easyrocks:$VERSION" labteral/easyrocks:latest

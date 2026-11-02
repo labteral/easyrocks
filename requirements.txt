@@ -1,2 +1,3 @@
-python-rocksdb~=0.7.0
-msgpack~=1.0.3
+rocksdict>=0.3.29,<1.0.0
+msgpack>=1.2.1,<2.0.0
+google-crc32c>=1.7.1,<2.0.0

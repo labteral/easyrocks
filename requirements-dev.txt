@@ -1,0 +1,9 @@
+build == 1.6.1
+flake8 == 7.4.1
+msgpack == 1.2.3
+pip == 26.2.1
+setuptools == 84.0.0
+twine == 7.0.0
+wheel == 0.48.0
+rocksdict == 0.3.29
+google-crc32c == 1.9.0

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.*
+.venv
+ENV
+build
+dist
+docker/.DS_Store
+docker/easyrocks.tar
+easyrocks.egg-info
+env
+release
+rocksdb
+venv
+**/__pycache__
+**/*.py[cod]
